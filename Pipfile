@@ -8,6 +8,8 @@ flask = "*"
 black = "*"
 flask-sqlalchemy = "*"
 psycopg2-binary = "*"
+marshmallow = "*"
+gunicorn = "*"
 
 [dev-packages]
 

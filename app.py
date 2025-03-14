@@ -1,15 +1,18 @@
 import logging.handlers
 import os
 import secrets
+import sys
 
 from flask import Flask, jsonify, redirect, url_for, request, abort
 from flask_sqlalchemy import SQLAlchemy
+from marshmallow import Schema, fields, ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 db = SQLAlchemy(app)
 
-# Configure logging
+# Configure logging to file
 log_file = "app.log"
 log_handler = logging.handlers.RotatingFileHandler(
     log_file, maxBytes=1024 * 1024, backupCount=5
@@ -22,6 +25,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(log_handler)
 
+# Add console logging so messages still appear in the console
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(log_formatter)
+logger.addHandler(console_handler)
+
 
 class Todo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,6 +40,20 @@ class Todo(db.Model):
 class ApiKey(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(256), unique=True, nullable=False)
+
+
+class TodoSchema(Schema):
+    id = fields.Integer(dump_only=True)
+    task = fields.String(required=True)
+
+
+class ApiKeySchema(Schema):
+    key = fields.String(dump_only=True)
+
+
+todo_schema = TodoSchema()
+todos_schema = TodoSchema(many=True)
+apikey_schema = ApiKeySchema()
 
 
 def generate_api_key():
@@ -54,9 +77,22 @@ def authenticate():
             abort(401)
 
 
+@app.errorhandler(400)
+def handle_validation_error(error):
+    logger.warning(f"Validation error: {error.description}")
+    return jsonify({"message": error.description}), 400
+
+
 @app.errorhandler(401)
 def unauthorized(error):
     return jsonify({"message": "Unauthorized"}), 401
+
+
+@app.errorhandler(500)
+def handle_database_error(error):
+    logger.error(f"Database error: {error}")
+    db.session.rollback()  # Rollback the session to a clean state
+    return jsonify({"message": "Internal Server Error"}), 500
 
 
 @app.route("/", methods=["GET"])
@@ -73,48 +109,80 @@ def health_check():
 
 @app.route("/todos", methods=["POST"])
 def create_todo():
-    data = request.get_json()
+    try:
+        data = todo_schema.load(request.get_json())
+    except ValidationError as err:
+        abort(400, description=err.messages)  # Use abort with description
+
     new_todo = Todo(task=data["task"])
-    db.session.add(new_todo)
-    db.session.commit()
-    logger.info(f"Todo created: {new_todo.id}")
-    return jsonify({"message": "Todo created"}), 201
+    try:
+        db.session.add(new_todo)
+        db.session.commit()
+        logger.info(f"Todo created: {new_todo.id}")
+        return todo_schema.dump(new_todo), 201
+    except SQLAlchemyError as e:
+        logger.exception("Error creating todo:")
+        db.session.rollback()
+        abort(500)
 
 
 @app.route("/todos", methods=["GET"])
 def get_todos():
-    todos = Todo.query.all()
-    todo_list = [{"id": todo.id, "task": todo.task} for todo in todos]
-    logger.info(f"Todos retrieved: {len(todo_list)}")
-    return jsonify({"todos": todo_list}), 200
+    try:
+        todos = Todo.query.all()
+        logger.info(f"Todos retrieved: {len(todos)}")
+        return jsonify(todos_schema.dump(todos)), 200
+    except SQLAlchemyError as e:
+        logger.exception("Error getting todos:")
+        db.session.rollback()
+        abort(500)
 
 
 @app.route("/todos/<int:todo_id>", methods=["PUT"])
 def update_todo(todo_id):
-    data = request.get_json()
-    todo = Todo.query.get_or_404(todo_id)
-    todo.task = data["task"]
-    db.session.commit()
-    logger.info(f"Todo updated: {todo_id}")
-    return jsonify({"message": "Todo updated"}), 200
+    try:
+        data = todo_schema.load(request.get_json())
+    except ValidationError as err:
+        abort(400, description=err.messages)
+
+    try:
+        todo = Todo.query.get_or_404(todo_id)
+        todo.task = data["task"]
+        db.session.commit()
+        logger.info(f"Todo updated: {todo_id}")
+        return todo_schema.dump(todo), 200
+    except SQLAlchemyError as e:
+        logger.exception(f"Error updating todo {todo_id}:")
+        db.session.rollback()
+        abort(500)
 
 
 @app.route("/todos/<int:todo_id>", methods=["DELETE"])
 def delete_todo(todo_id):
-    todo = Todo.query.get_or_404(todo_id)
-    db.session.delete(todo)
-    db.session.commit()
-    logger.info(f"Todo deleted: {todo_id}")
-    return jsonify({"message": "Todo deleted"}), 200
+    try:
+        todo = Todo.query.get_or_404(todo_id)
+        db.session.delete(todo)
+        db.session.commit()
+        logger.info(f"Todo deleted: {todo_id}")
+        return jsonify({"message": "Todo deleted"}), 200
+    except SQLAlchemyError as e:
+        logger.exception(f"Error deleting todo {todo_id}:")
+        db.session.rollback()
+        abort(500)
 
 
 @app.route("/api-keys", methods=["POST"])
 def create_api_key():
-    new_key = ApiKey(key=generate_api_key())
-    db.session.add(new_key)
-    db.session.commit()
-    logger.info("API key created")
-    return jsonify({"api_key": new_key.key}), 201
+    try:
+        new_key = ApiKey(key=generate_api_key())
+        db.session.add(new_key)
+        db.session.commit()
+        logger.info("API key created")
+        return apikey_schema.dump(new_key), 201
+    except SQLAlchemyError as e:
+        logger.exception("Error creating API key:")
+        db.session.rollback()
+        abort(500)
 
 
 if __name__ == "__main__":
