@@ -37,6 +37,9 @@ def authenticate():
         if not api_key or not verify_api_key(api_key):
             abort(401)
 
+@app.errorhandler(401)
+def unauthorized(error):
+    return jsonify({'message': 'Unauthorized'}), 401
 
 @app.route("/", methods=["GET"])
 def root():
