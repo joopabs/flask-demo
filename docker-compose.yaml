@@ -1,0 +1,7 @@
+services:
+  api:
+    build: .
+    image: flask-todo-api-img
+    container_name: flask-todo-api
+    ports:
+      - "5000:5000"
