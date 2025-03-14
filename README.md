@@ -87,7 +87,7 @@ This project includes a Dockerfile and a docker-compose.yaml for easy containeri
    Use Docker Compose to build and run both the API and the PostgreSQL database service:
 
    ```bash
-   docker-compose up --build -d
+   COMPOSE_BAKE=true docker-compose up --build -d
    ```
 
 2. **Shut Down the Services:**
@@ -98,6 +98,18 @@ This project includes a Dockerfile and a docker-compose.yaml for easy containeri
    docker-compose down -v
    ```
 
+## API Key Generation
+
+API key authentication protects the `/todos` endpoints. You must generate an API key to interact with these endpoints. To generate a new API key, use the following cURL command:
+
+  ```bash
+  curl -X POST http://localhost:5000/api-keys
+  ```
+On success, this command will return a JSON object containing the generated API key:
+
+  ```json
+    { "api_key": "<your_generated_api_key>" }
+  ```
 ## API Endpoints and Testing with cURL
 
 Below are some example cURL commands to test the API endpoints.
@@ -119,6 +131,7 @@ Below are some example cURL commands to test the API endpoints.
   ```bash
   curl -X POST http://localhost:5000/todos \
        -H "Content-Type: application/json" \
+       -H "Authorization: <your_api_key>" \
        -d '{"task": "Buy groceries"}'
   ```
 
@@ -128,7 +141,7 @@ Below are some example cURL commands to test the API endpoints.
 - **Description:** Retrieves a list of all todo items.
 
   ```bash
-  curl http://localhost:5000/todos
+  curl -H "Authorization: <your_api_key>" http://localhost:5000/todos
   ```
 
 ### Update a Todo
@@ -139,6 +152,7 @@ Below are some example cURL commands to test the API endpoints.
   ```bash
   curl -X PUT http://localhost:5000/todos/1 \
        -H "Content-Type: application/json" \
+       -H "Authorization: <your_api_key>" \
        -d '{"task": "Buy groceries and fruits"}'
   ```
 
@@ -148,7 +162,8 @@ Below are some example cURL commands to test the API endpoints.
 - **Description:** Deletes a specific todo item by its ID. Replace `<id>` with the actual todo id.
 
   ```bash
-  curl -X DELETE http://localhost:5000/todos/1
+  curl -X DELETE http://localhost:5000/todos/1 \
+       -H "Authorization: <your_api_key>"
   ```
 
 ## Code Quality
