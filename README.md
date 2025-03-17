@@ -2,24 +2,27 @@
 
 # Flask ToDo API
 
-This project is a simple Flask-based API for managing ToDo items. It allows you to create, retrieve, update, and delete tasks from a database using CRUD operations. The application leverages Flask-SQLAlchemy for ORM-based database interactions, is fully containerized with Docker, and uses Pipenv for dependency management.
+A simple Flask-based API for managing ToDo items. This project uses Flask-SQLAlchemy for interacting with a PostgreSQL database and supports both local and containerized deployments. Sensitive settings (like the database URL) can be managed through environment variables or Azure Key Vault.
+
+---
 
 ## Features
 
-- **Health Check Endpoint:** Quickly verify if the application is running.
-- **CRUD Endpoints:** Endpoints to create, retrieve, update, and delete todo items.
-- **Automatic Database Setup:** Required database tables are automatically created on startup.
-- **Containerized Deployment:** Docker and Docker Compose support for simplified deployment.
-- **Pipenv Workflow:** Uses Pipenv for dependency and virtual environment management.
+- **Health Check Endpoint:** Quickly verify that the application is running.
+- **CRUD Endpoints:** Create, retrieve, update, and delete ToDo items.
+- **Automatic Database Setup:** Required tables are created automatically on startup.
+- **Local and Secure Configuration:** Use a `.env` file for local settings or Azure Key Vault for production secrets.
+- **Containerized Deployment:** Preconfigured Dockerfile and Docker Compose setup for easy cloud or local container deployment.
+
+---
 
 ## Requirements
 
-- Python 3.13  
-- [Pipenv](https://pipenv.pypa.io/en/latest/)
+- **Python:** 3.13  
+- **Dependency Management:** Pipenv  
+- **Container Requirements (optional):** Docker & Docker Compose  
 
-For containerized setups:
-- Docker
-- Docker Compose
+---
 
 ## Setup and Installation
 
@@ -32,139 +35,112 @@ For containerized setups:
    cd <repository-directory>
    ```
 
-2. **Install Dependencies with Pipenv:**
-   
-   Ensure you have Pipenv installed. Then run:
+2. **Install Dependencies:**
+
+   Use Pipenv to install the necessary packages:
 
    ```bash
    pipenv install
    ```
 
-   This will create a virtual environment and install all required packages.
+3. **Configure Environment Variables:**
 
-3. **Configure the Database:**
+   Create a `.env` file at the project root (an example is provided in `.env.example`). For instance, to configure your database:
 
-   Set the `DATABASE_URL` environment variable to point to your PostgreSQL (or another supported) instance. For example:
-
-   ```bash
-   export DATABASE_URL=postgresql://postgres:postgres@db:5432/todo_db
+   ```dotenv
+   DATABASE_URL=postgresql://postgres:postgres@db:5432/todo_db
+   USE_KEYVAULT=False
    ```
+
+   If you plan to use Azure Key Vault, set `USE_KEYVAULT=True` and add the required keys.
 
 4. **Run the Application:**
 
-   Once the dependencies are installed, start the application using:
+   Launch the application with:
 
    ```bash
    pipenv run python app.py
    ```
 
-   The application will run in debug mode and listen on port 5000.
+   The API will start in debug mode on port 5000.
 
-### Dockerized Setup
-
-This project includes a Dockerfile and a docker-compose.yaml for easy containerized deployment.
-
-#### Using Docker
-
-1. **Build the Docker Image:**
-
-   ```bash
-   docker build --no-cache -t flask-todo-api-img .
-   ```
-
-2. **Run the Docker Container:**
-
-   Make sure to pass required environment variables, such as `DATABASE_URL`:
-
-   ```bash
-   docker run -d --name flask-todo-api -p 5000:5000 -e DATABASE_URL=<your_database_url> flask-todo-api-img
-   ```
+### Dockerized Deployment
 
 #### Using Docker Compose
 
 1. **Start the Services:**
 
-   Use Docker Compose to build and run both the API and the PostgreSQL database service:
+   Use Docker Compose to build and run both the API and the PostgreSQL database:
 
    ```bash
    COMPOSE_BAKE=true docker-compose up --build -d
    ```
 
-2. **Shut Down the Services:**
+2. **Stop the Services:**
 
-   When finished, stop and remove the containers with:
+   Shut down the containers when finished:
 
    ```bash
    docker-compose down -v
    ```
 
-## API Key Generation
+---
 
-API key authentication protects the `/todos` endpoints. You must generate an API key to interact with these endpoints. To generate a new API key, use the following cURL command:
-
-  ```bash
-  curl -X POST http://localhost:5000/api-keys
-  ```
-On success, this command will return a JSON object containing the generated API key:
-
-  ```json
-    { "api_key": "<your_generated_api_key>" }
-  ```
-## API Endpoints and Testing with cURL
-
-Below are some example cURL commands to test the API endpoints.
+## API Endpoints
 
 ### Health Check
 
-- **Endpoint:** GET `/health`
-- **Description:** Returns the health status of the application.
+- **Method:** GET  
+- **Endpoint:** `/health`  
+- **Description:** Returns the current health status of the application.
 
-  ```bash
-  curl http://localhost:5000/health
-  ```
+   ```bash
+   curl http://localhost:5000/health
+   ```
 
-### Create a Todo
+### Create a ToDo
 
-- **Endpoint:** POST `/todos`
-- **Description:** Creates a new todo item. The request body expects a JSON payload with a `task` property.
+- **Method:** POST  
+- **Endpoint:** `/todos`  
+- **Description:** Create a new ToDo item. The payload must include a `task` attribute.
 
-  ```bash
-  curl -X POST http://localhost:5000/todos \
-       -H "Content-Type: application/json" \
-       -H "Authorization: <your_api_key>" \
-       -d '{"task": "Buy groceries"}'
-  ```
+   ```bash
+   curl -X POST http://localhost:5000/todos \
+        -H "Content-Type: application/json" \
+        -d '{"task": "Buy groceries"}'
+   ```
 
-### Retrieve All Todos
+### Retrieve All ToDos
 
-- **Endpoint:** GET `/todos`
-- **Description:** Retrieves a list of all todo items.
+- **Method:** GET  
+- **Endpoint:** `/todos`  
+- **Description:** Retrieves a list of all ToDo items.
 
-  ```bash
-  curl -H "Authorization: <your_api_key>" http://localhost:5000/todos
-  ```
+   ```bash
+   curl http://localhost:5000/todos
+   ```
 
-### Update a Todo
+### Update a ToDo
 
-- **Endpoint:** PUT `/todos/<id>`
-- **Description:** Updates an existing todo item by its ID. Replace `<id>` with the actual todo id.
+- **Method:** PUT  
+- **Endpoint:** `/todos/<id>`  
+- **Description:** Update an existing ToDo item by its ID.
 
-  ```bash
-  curl -X PUT http://localhost:5000/todos/1 \
-       -H "Content-Type: application/json" \
-       -H "Authorization: <your_api_key>" \
-       -d '{"task": "Buy groceries and fruits"}'
-  ```
+   ```bash
+   curl -X PUT http://localhost:5000/todos/1 \
+        -H "Content-Type: application/json" \
+        -d '{"task": "Buy groceries and fruits"}'
+   ```
 
-### Delete a Todo
+### Delete a ToDo
 
-- **Endpoint:** DELETE `/todos/<id>`
-- **Description:** Deletes a specific todo item by its ID. Replace `<id>` with the actual todo id.
+- **Method:** DELETE  
+- **Endpoint:** `/todos/<id>`  
+- **Description:** Delete a specific ToDo item by its ID.
 
-  ```bash
-  curl -X DELETE http://localhost:5000/todos/1 \
-       -H "Authorization: <your_api_key>"
-  ```
+   ```bash
+   curl -X DELETE http://localhost:5000/todos/1
+   ```
 
 ## Code Quality
 
