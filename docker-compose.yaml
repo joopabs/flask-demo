@@ -3,25 +3,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: flask-todo-api-img
-    container_name: flask-todo-api
+    image: flaskapi-dev-todo-app
+    container_name: flaskapi-todo-app
     ports:
       - "5000:5000"
-    restart: always
     depends_on:
       - db
-    environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
   db:
     image: postgres:15-alpine
     container_name: todo-db
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo_db
     ports:
       - "5432:5432"
-    restart: always
     volumes:
       - todo_db_data:/var/lib/postgresql/data/
 volumes:

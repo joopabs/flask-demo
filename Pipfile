@@ -10,6 +10,9 @@ flask-sqlalchemy = "*"
 psycopg2-binary = "*"
 marshmallow = "*"
 gunicorn = "*"
+azure-identity = "*"
+azure-keyvault-secrets = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
