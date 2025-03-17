@@ -3,12 +3,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: flaskapi-dev-todo-app
+    image: ${ACR_URL}flaskapi-todo-app:v1
     container_name: flaskapi-todo-app
     ports:
       - "5000:5000"
     depends_on:
       - db
+    environment:
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      KEY_VAULT_URL: ${KEY_VAULT_URL}
+      SECRET_NAME: ${SECRET_NAME}
+      USE_KEYVAULT: ${USE_KEYVAULT}
+      DATABASE_URL: ${DATABASE_URL}
+      ACR_URL: ${ACR_URL}
   db:
     image: postgres:15-alpine
     container_name: todo-db

@@ -1,0 +1,17 @@
+# Ignore Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore secret and config files (optional, if mounted via volumes or env vars)
+.env
+.env.*
+
+# Ignore git & metadata
+.git/
+.gitignore
+
+# Ignore Docker-related files if not needed in context
+Dockerfile
+docker-compose.yaml
